@@ -8,7 +8,10 @@ module.exports = {
         return 'hello';
     },
     registerAccount: async function({registerAccountInput: {email, password}}, res) {
-        console.log(res, 'RESPONSE');
+        // ERRORS HANDLING FROM GRAPHQL
+        // const notAuthenticatedError = new Error('Not authenticated');
+        // notAuthenticatedError.statusCode = 401;
+        // throw notAuthenticatedError;
         try {
             const result = await User.create({
                 email,
@@ -38,7 +41,7 @@ module.exports = {
                     id: userDb.id,
                     email: userDb.email,
                     username: userDb.username,
-                    accessToken: accessToken
+                    accessToken: 'Bearer ' + accessToken
                 }
             } else throw new Error('No user');
         } catch (e) {
