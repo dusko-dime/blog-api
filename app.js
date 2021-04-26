@@ -5,6 +5,8 @@ const schema = require('./graphql/schema');
 const root = require('./graphql/resolvers');
 const sequelize = require('./util/database');
 const user = require('./models/user');
+const jwt = require('express-jwt');
+const {checkAccessToken} = require("./util/functionalities");
 
 const app = express();
 app.use(bodyParser.json()); // application/json
@@ -22,7 +24,14 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use('/graphql', graphqlHTTP({
+const authorizationMiddleware = (req, res, next) => {
+    const authorization = req.get("Authorization");
+    const ca = checkAccessToken(authorization);
+    console.log(req, 'IS VALID');
+    next();
+}
+
+app.use('/graphql', authorizationMiddleware, graphqlHTTP({
     schema: schema,
     rootValue: root,
     graphiql: true,

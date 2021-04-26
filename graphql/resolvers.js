@@ -20,7 +20,8 @@ module.exports = {
             console.error(err);
         }
     },
-    login: async function({loginInput: {email, password}}, res) {
+    login: async function({loginInput: {email, password}}, args, context) {
+        console.log('ARGS: ' + args);
         try {
             const userDb = await User.findOne({
                 raw: true,
@@ -29,14 +30,17 @@ module.exports = {
                     password
                 }
             });
-            console.log(userDb, 'USER DB');
-            const accessToken = generateAccessToken(userDb.username, userDb.id);
-            //res.setHeader('token', accessToken);
-            return {
-                id: userDb.id,
-                email: userDb.email,
-                username: userDb.username
-            }
+            if(userDb) {
+                console.log(userDb, 'USER DB');
+                const accessToken = generateAccessToken(userDb.username, userDb.id);
+                // args.res.setHeader('token', accessToken);
+                return {
+                    id: userDb.id,
+                    email: userDb.email,
+                    username: userDb.username,
+                    accessToken: accessToken
+                }
+            } else throw new Error('No user');
         } catch (e) {
             console.error(e);
         }
