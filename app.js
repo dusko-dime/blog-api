@@ -1,8 +1,5 @@
 const express = require('express');
-const { graphqlHTTP } = require('express-graphql');
 const bodyParser = require('body-parser');
-const schema = require('./graphql/schema');
-const root = require('./graphql/resolvers');
 const sequelize = require('./util/database');
 const user = require('./models/user');
 const {generateAccessToken} = require("./util/functionalities");
@@ -10,7 +7,11 @@ const {checkAccessToken} = require("./util/functionalities");
 const jwt = require("jsonwebtoken");
 const expressJwt = require('express-jwt');
 const dotenv = require("dotenv");
-
+const { ApolloServer } = require('apollo-server-express');
+const { makeExecutableSchema } = require('graphql-tools');
+const typeDefs = require("./graphql/modules/auth/typeDefs");
+const resolvers = require("./graphql/modules/auth/resolvers");
+const application = require("./graphql/modules/application");
 
 const app = express();
 app.use(bodyParser.json()); // application/json
@@ -28,6 +29,8 @@ app.use((req, res, next) => {
     }
     next();
 });
+
+const schema = application.createSchemaForApollo();
 
 // const authorizationMiddleware = (req, res, next) => {
     // const authorization = req.get("Authorization");
@@ -53,31 +56,43 @@ app.use(function (err, req, res, next) {
     next();
 });
 
-const refreshTokenMiddleware = (req, res, next) => {
-    console.log('REFRESH TOKEN');
-    const authorization = req.get("Authorization");
-    try {
-        const jwtObj = jwt.decode(authorization);
-        const accessToken = generateAccessToken(jwtObj.username, jwtObj.userId);
-        res.set("Authorization", accessToken);
-        next();
-    } catch(e) {
-        console.error(e);
-        next();
-    }
-}
+// const refreshTokenMiddleware = (req, res, next) => {
+//     console.log('REFRESH TOKEN');
+//     const authorization = req.get("Authorization");
+//     try {
+//         const jwtObj = jwt.decode(authorization);
+//         const accessToken = generateAccessToken(jwtObj.username, jwtObj.userId);
+//         res.set("Authorization", accessToken);
+//         next();
+//     } catch(e) {
+//         console.error(e);
+//         next();
+//     }
+// }
 
-app.use('/graphql',
-    // authorizationMiddleware,
-    expressJwt({secret: process.env.TOKEN_SECRET, algorithms: ['HS256'], credentialsRequired: false}),
-    graphqlHTTP({
-    schema: schema,
-    rootValue: root,
-    graphiql: true,
-    // customValidateFn() {
-    //   console.log('ALOOOOO');
-    // },
-    customFormatErrorFn(err) {
+app.use(
+    expressJwt({secret: process.env.TOKEN_SECRET, algorithms: ['HS256'], credentialsRequired: false})
+);
+
+//jwt error handler middleware
+app.use(function (err, req, res, next) {
+    if (err.name === 'UnauthorizedError') {
+        res.status(401).send('Authentication error');
+    } else if(err) {
+        res.status(500).send('Authentication error');
+    }
+});
+
+const server = new ApolloServer({
+    schema,
+    context: ({req}) => {
+      const user = req.user || null;
+      // console.log(req, 'REQUES');
+      // if(!user)
+      //     throw new AuthenticationError("You must be logged in");
+      return {user};
+    },
+    formatError: (err) => {
         if(!err.originalError) {
             return err;
         }
@@ -87,15 +102,20 @@ app.use('/graphql',
             code,
             message
         }
+    },
+    playground: {
+        settings: {
+            'editor.theme': 'dark',
+        },
+        tabs: [
+            {
+                endpoint: 'http://localhost:5000/graphql'
+            }
+        ]
     }
-}), refreshTokenMiddleware);
-
-//handling errors from other middlewares
-app.use('/', (req, res, next) => {
-    console.log('ALOOOOOOOOOOOOOOO');
-    res.statusCode = 500;
-    res.send('Error has occured');
 });
+
+server.applyMiddleware({ app });
 
 sequelize.sync({
     force: false,

@@ -11,15 +11,19 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "apollo-server": "^2.23.0",
     "nodemon": "^2.0.6"
   },
   "dependencies": {
+    "apollo-server-express": "^2.23.0",
     "body-parser": "^1.19.0",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "express-graphql": "^0.12.0",
     "express-jwt": "^6.0.0",
     "graphql": "^15.4.0",
+    "graphql-modules": "^1.4.2",
+    "graphql-tools": "^7.0.4",
     "jsonwebtoken": "^8.5.1",
     "mysql2": "^2.2.5",
     "sequelize": "^6.6.2"
